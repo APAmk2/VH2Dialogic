@@ -73,9 +73,9 @@ std::vector<std::string> extractDialogLines(const std::string& content)
         if (std::regex_search(formattedLine, match, wait_re))
         {
             std::string number_str = match[1]; // match[1] contains the number
-            float number = std::stof(number_str) / 30;
+            // float number = std::stof(number_str) / 30;
 
-            formattedLine = std::regex_replace(formattedLine, wait_re, "\n\[wait time=\"" + std::to_string(number) + "\"\]\n");
+            formattedLine = std::regex_replace(formattedLine, wait_re, "\n\[wait time=\"" + std::to_string(std::stof(number_str) / 30) + "\"\]\n");
         }
 
         dialogLines.push_back(formattedLine);
