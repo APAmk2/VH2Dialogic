@@ -43,6 +43,9 @@ std::vector<std::string> extractDialogLines(const std::string& content)
         formattedLine = std::regex_replace(formattedLine, std::regex("#"), "");
         formattedLine = std::regex_replace(formattedLine, std::regex("\\[SHOW:\\]"), "");
 
+        formattedLine = std::regex_replace(formattedLine, std::regex("\\[DOOR:\\]"), "\n\[sound path=\"res://resources/Exported_Sounds/audiogroup_default/door.ogg\" volume=\"0.0\" bus=\"SFX\"\]\n");
+        formattedLine = std::regex_replace(formattedLine, std::regex("\\[BANG:\\]"), "\n\[sound path=\"res://resources/Exported_Sounds/audiogroup_default/plomamentazon.ogg\" volume=\"0.0\" bus=\"SFX\"\]\n");
+
         std::regex wait_re("\\[P:(\\d+)\\]");
         std::regex show_re("\\[SHOW:(\\d+),sprite_(\\w+)\\]");
         std::smatch match;
