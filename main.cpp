@@ -10,18 +10,47 @@ void convertDialog(const std::filesystem::path &txtFilePath);
 
 std::string formatLine(std::string line);
 
+std::string conditionFind(int n);
+
 int main(int argc, char *argv[])
 {
-    if (argc != 2)
+    if (argc < 2)
     {
-        std::cout << "Usage: ./program_name <txtFilePath>" << std::endl;
+        std::cout << "Usage: ./program_name <txtFilePath> <gml_Script_FilePath> (more than one gml_Script_FilePath is accepted)" << std::endl;
         return 1;
     }
 
     std::filesystem::path txtFilePath = argv[1];
 
-    convertDialog(txtFilePath);
+    std::ofstream outFile("tmp.gml");
 
+    if (!outFile)
+    {
+        std::cerr << "Failed to open output file." << std::endl;
+        return 1;
+    }
+
+    for (int i = 2; i < argc; i++)
+    {
+        std::ifstream inFile(argv[i]);
+        if (!inFile)
+        {
+            std::cerr << "Failed to open input file: " << argv[i] << std::endl;
+            continue;
+        }
+
+        outFile << inFile.rdbuf();
+        inFile.close();
+    }
+
+    outFile.close();
+
+    convertDialog(txtFilePath);
+    if (remove("tmp.gml") != 0)
+    {
+        std::cerr << "Failed to delete tmp file." << std::endl;
+        return 1;
+    }
     return 0;
 }
 
@@ -64,20 +93,12 @@ void convertDialog(const std::filesystem::path &txtFilePath)
 std::string formatLine(std::string line)
 {
 
-    // Remove unnecessary characters or tags from each line
-    // (e.g., [E:1], [STOPLIP:], [XS:jilltalk,1], [C:13], etc.)
-    // You can use string manipulation functions or regular expressions for this.
-    // Add the formatted dialog line to the dialogLines vector.
-
-    // Remove [E:1] tag
-    // line = std::regex_replace(line, std::regex("\\[E:\\d+\\]"), "");
-
     // Remove [STOPLIP:] tag
     line = std::regex_replace(line, std::regex("\\[STOPLIP:\\]"), "");
 
     // Remove [XS:dantalk,1] or [XS:dantalk,0] tag
 
-    line = std::regex_replace(line, std::regex("\\[XS:(\\w+)hide,(\\d+)\\]"), "\nleave $1");
+    line = std::regex_replace(line, std::regex("\\[XS:(\\w+)hide,\\d+\\]"), "\nleave $1");
     line = std::regex_replace(line, std::regex("\\[XS:mix,1\\]"), "\nset {Dialogic.paused} = true\n");
     line = std::regex_replace(line, std::regex("\\[XS:[^\\]]+\\]"), "");
 
@@ -91,14 +112,13 @@ std::string formatLine(std::string line)
     line = std::regex_replace(line, std::regex("\\[DOOR:\\]"), "\n[sound path=\"res://resources/Exported_Sounds/audiogroup_default/door.ogg\" volume=\"0.0\" bus=\"SFX\"]\n");
     line = std::regex_replace(line, std::regex("\\[BANG:\\]"), "\n[sound path=\"res://resources/Exported_Sounds/audiogroup_default/plomamentazon.ogg\" volume=\"0.0\" bus=\"SFX\"]\n");
 
-    std::regex wait_re("\\[P:(\\d+)\\]");
-    std::regex show_re("\\[SHOW:(\\d+),sprite_(\\w+)\\]");
     std::smatch match;
 
+    std::regex show_re("\\[SHOW:(\\d+),sprite_(\\w+)\\]");
     if (std::regex_search(line, match, show_re))
     {
         std::string number_str = match[1]; // match[1] contains the number
-        int number = std::stoi(number_str);
+        int number = std::stoi(match[1]);
         if (number == 185)
         {
             number = 1;
@@ -115,6 +135,7 @@ std::string formatLine(std::string line)
         line = std::regex_replace(line, show_re, "join $2 " + std::to_string(number) + "\n");
     }
 
+    std::regex wait_re("\\[P:(\\d+)\\]");
     if (std::regex_search(line, match, wait_re))
     {
         std::string number_str = match[1]; // match[1] contains the number
@@ -122,5 +143,68 @@ std::string formatLine(std::string line)
 
         line = std::regex_replace(line, wait_re, "\n[wait time=\"" + std::to_string(std::stof(number_str) / 30) + "\"]\n");
     }
+
+    std::regex e_re("\\[E:(\\d+)\\]");
+    if (std::regex_search(line, match, e_re))
+    {
+        line = std::regex_replace(line, e_re, "\n" + conditionFind(std::stoi(match[1])));
+    }
+
     return line;
+}
+
+std::string conditionFind(int n)
+{
+    std::ifstream file("tmp.gml");
+    std::string line;
+    std::vector<std::string> lines;
+
+    while (std::getline(file, line))
+    {
+        lines.push_back(line);
+        if (line.find("textbox_create(global.demo, " + std::to_string(n) + ", 1)") != std::string::npos)
+        {
+            break;
+        }
+    }
+    std::vector<std::string>::reverse_iterator rit = lines.rbegin();
+    std::string::size_type pos;
+    bool casebool = false;
+    std::string condition;
+    while (rit != lines.rend())
+    {
+        line = *rit;
+
+        pos = line.find("else if (");
+        if (pos == std::string::npos)
+        {
+            pos = line.find("if (");
+        }
+        if (pos == std::string::npos)
+        {
+            pos = line.find("else");
+        }
+        if (pos == std::string::npos)
+        {
+            pos = line.find("case \"");
+            casebool = true;
+        }
+        if (pos == std::string::npos)
+        {
+            rit++;
+            continue;
+        }
+
+        if (!casebool)
+        {
+            condition = line.substr(pos, line.find(")") - pos + 1);
+        }
+        else
+        {
+            condition = line.substr(pos, line.find(":") - pos + 1);
+        }
+        break;
+    }
+
+    return condition;
 }
