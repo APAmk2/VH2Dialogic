@@ -12,15 +12,19 @@ std::string formatLine(std::string line);
 
 std::string conditionFind(int n);
 
+std::string postfix;
+
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
+    if (argc < 3)
     {
-        std::cout << "Usage: ./program_name <txtFilePath> <gml_Script_FilePath> (more than one gml_Script_FilePath is accepted)" << std::endl;
+        std::cout << "Usage: ./program_name <txtFilePath> <filePostfix> <gml_Script_FilePath> (more than one gml_Script_FilePath is accepted)" << std::endl;
         return 1;
     }
 
     std::filesystem::path txtFilePath = argv[1];
+
+    postfix = argv[2];
 
     std::ofstream outFile("tmp.gml");
 
@@ -30,7 +34,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    for (int i = 2; i < argc; i++)
+    for (int i = 3; i < argc; i++)
     {
         std::ifstream inFile(argv[i]);
         if (!inFile)
@@ -162,7 +166,7 @@ std::string conditionFind(int n)
     while (std::getline(file, line))
     {
         lines.push_back(line);
-        if (line.find("textbox_create(global.demo, " + std::to_string(n) + ", 1)") != std::string::npos)
+        if (line.find("textbox_create(global." + postfix + ", " + std::to_string(n) + ", 1)") != std::string::npos)
         {
             break;
         }
