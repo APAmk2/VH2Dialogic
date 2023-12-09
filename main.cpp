@@ -206,5 +206,8 @@ std::string conditionFind(int n)
         break;
     }
 
+    condition = std::regex_replace(condition, std::regex("global.(\\w+)(\\d+)"), "{GlobalVars.$1\[$2\]}");
+    condition = std::regex_replace(condition, std::regex("global.(\\w+)"), "{GlobalVars.$1}");
+    
     return condition;
 }
